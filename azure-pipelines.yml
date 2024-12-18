@@ -1,0 +1,90 @@
+trigger:
+  - main
+
+pool: 'localagent'
+
+variables:
+  terraform_version: '1.10.0'
+
+stages:
+  - stage: TerraformPlan
+    displayName: "Terraform Plan"
+    jobs:
+      - job: Plan
+        displayName: "Run Terraform Plan"
+        steps:
+          - script: |
+              terraform init
+              terraform plan
+            workingDirectory: terraform-scripts/
+            displayName: "Run Terraform Plan"
+
+  ## MANUAL APPROVAL TO VALIDATE DEPLOYMENT
+  # - stage: Approval
+  #   displayName: "Approval Stage"
+  #   dependsOn: TerraformPlan
+  #   condition: succeeded()
+  #   jobs:
+  #     - deployment: WaitForApproval
+  #       displayName: "Manual Approval"
+  #       environment: 'Production'
+  #       strategy:
+  #         runOnce:
+  #           deploy:
+  #             steps:
+  #               - task: ManualValidation@0
+  #                 inputs:
+  #                   instructions: "Approve or reject the deployment."
+  #                   onTimeout: "reject"
+
+  ## SIMULATED APPROVAL CALLING THE FUNCTION APP HTTP TRIGGER
+  - stage: Approval
+    displayName: "Approval Stage"
+    dependsOn: TerraformPlan
+    condition: succeeded()
+    jobs:
+      - job: Approval
+        steps:
+          ## RUN ONCE
+          - script: |
+              response=$(curl -s https://<function-app-name>.azurewebsites.net/api/<http-trigger-name>)
+              echo "Approval function response: $response"
+              if [[ "$response" == "Approved" ]]; then
+                  echo "Deployment approved."
+                  exit 0
+              else
+                  echo "Deployment not approved."
+                  exit 1
+              fi
+            displayName: "Call Approval Function"
+          ## EXECUTE 3 RETRIES IN 5 sec INTERVAL
+          # - script: |
+          #     retries=3
+          #     for i in $(seq 1 $retries); do
+          #         response=$(curl -s https://<function-app-name>.azurewebsites.net/api/<http-trigger-name>)
+          #         echo "Attempt $i: Approval function response: $response"
+          #         if [[ "$response" == "Approved" ]]; then
+          #             echo "Deployment approved."
+          #             exit 0
+          #         fi
+          #         echo "Retrying in 5 seconds..."
+          #         sleep 5
+          #     done
+          #     echo "Deployment not approved after $retries attempts."
+          #     exit 1
+          #   displayName: "Call Approval Function with Retry"
+
+
+  - stage: TerraformApply
+    displayName: "Terraform Apply"
+    dependsOn: Approval
+    condition: succeeded()
+    jobs:
+      - job: Apply
+        displayName: "Apply Terraform Plan"
+        steps:
+          - script: |
+              terraform init -upgrade
+              terraform apply -auto-approve
+            workingDirectory: terraform-scripts/
+            displayName: "Apply Terraform Changes"
