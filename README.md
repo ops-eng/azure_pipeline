@@ -29,16 +29,13 @@ terraform apply
 ## Create the agent
 ```bash
 ~/$ mkdir myagent && cd myagent
-~/myagent$ tar zxvf ~/Downloads/vsts-agent-osx-x64-4.248.0.tar.gz
+~/myagent$ tar zxvf ~/downloads/vsts-agent-osx-x64-4.248.0.tar.gz
 ```
 
 ## Configure the agentDetailed instructions
 ```bash
 ~/myagent$ ./config.sh
 ```
-
-Enter Server URL:
-Azure Pipelines: https://dev.azure.com/timtampouris
 
 ## Run the agent interactively
 ```bash
@@ -54,7 +51,7 @@ Push the azure-pipeline/ folder to your repository.
 
 ```bash
 git init
-git remote add origin https://timtampouris@dev.azure.com/timtampouris/cicdassessment/_git/cicdassessment
+git remote add origin https://\<your-organization\>@dev.azure.com/\<your-organization\>/cicdassessment/_git/cicdassessment
 git push -u origin --all
 git add .
 git commit -m "Initial commit"
@@ -66,3 +63,9 @@ Go to Azure DevOps → Pipelines → Create Pipeline.
 Select the repository and the azure-pipelines.yml file.
 
 Run the pipeline.
+
+# Function for Approval process
+
+You need to create a Function app and a http-trigger.
+
+The function_app.py script will simulate a random deployment approval check. Returns a decision ("Approved" or "Not Approved") as the response.
