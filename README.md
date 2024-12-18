@@ -29,7 +29,7 @@ terraform apply
 ## Create the agent
 ```bash
 ~/$ mkdir myagent && cd myagent
-~/myagent$ tar zxvf ~/downloads/vsts-agent-osx-x64-4.248.0.tar.gz
+~/myagent$ tar zxvf ~/downloads/vsts-agent-osx-x64-V.vvv.v.tar.gz
 ```
 
 ## Configure the agentDetailed instructions
@@ -41,7 +41,6 @@ terraform apply
 ```bash
 ~/myagent$ ./run.sh
 ```
-
 
 # Steps to Set Up the Pipeline
 
