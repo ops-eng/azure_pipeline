@@ -1,0 +1,87 @@
+trigger:
+  - main
+
+pool: 'local'
+
+variables:
+  terraform_version: '1.10.0'
+
+stages:
+  - stage: TerraformPlan
+    displayName: "Terraform Plan"
+    jobs:
+      - job: Plan
+        displayName: "Run Terraform Plan"
+        steps:
+          - script: |
+              terraform init
+              terraform plan
+            workingDirectory: terraform-scripts/
+            displayName: "Run Terraform Plan"
+  
+  - stage: Approval
+    displayName: "Approval Stage"
+    dependsOn: TerraformPlan
+    condition: succeeded()
+    jobs:
+      - deployment: WaitForApproval
+        displayName: "Manual Approval"
+        pool: server
+        environment: 'Approval'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: ManualValidation@0
+                  inputs:
+                    instructions: "Approve or reject the deployment."
+                    onTimeout: "reject"
+  
+  # - stage: Approval
+  #   displayName: "Approval Stage"
+  #   dependsOn: TerraformPlan
+  #   condition: succeeded()
+  #   jobs:
+  #     - job: Approval
+  #       steps:
+          # - script: |
+          #     retries=3
+          #     for i in $(seq 1 $retries); do
+          #         response=$(curl -s https://cicdassessment.azurewebsites.net/api/http_trigger1)
+          #         echo "Attempt $i: Approval function response: $response"
+          #         if [[ "$response" == "Approved" ]]; then
+          #             echo "Deployment approved."
+          #             exit 0
+          #         fi
+          #         echo "Retrying in 5 seconds..."
+          #         sleep 5
+          #     done
+          #     echo "Deployment not approved after $retries attempts."
+          #     exit 1
+          #   displayName: "Call Approval Function with Retry"
+          ## RUN ONCE
+          # - script: |
+          #     response=$(curl -s https://cicdassessment.azurewebsites.net/api/http_trigger1)
+          #     echo "Approval function response: $response"
+          #     if [[ "$response" == "Approved" ]]; then
+          #         echo "Deployment approved."
+          #         exit 0
+          #     else
+          #         echo "Deployment not approved."
+          #         exit 1
+          #     fi
+          #   displayName: "Call Approval Function"
+
+  - stage: TerraformApply
+    displayName: "Terraform Apply"
+    dependsOn: Approval
+    condition: succeeded()
+    jobs:
+      - job: Apply
+        displayName: "Apply Terraform Plan"
+        steps:
+          - script: |
+              terraform init -upgrade
+              terraform apply -auto-approve
+            workingDirectory: terraform-scripts/
+            displayName: "Apply Terraform Changes"
