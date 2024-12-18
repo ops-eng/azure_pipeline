@@ -19,7 +19,7 @@ stages:
             workingDirectory: terraform-scripts/
             displayName: "Run Terraform Plan"
 
-  ## MANUAL APPROVAL
+  ## MANUAL APPROVAL TO VALIDATE DEPLOYMENT
   # - stage: Approval
   #   displayName: "Approval Stage"
   #   dependsOn: TerraformPlan
