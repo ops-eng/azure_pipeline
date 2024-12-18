@@ -1,7 +1,7 @@
 trigger:
   - main
 
-pool: 'local'
+pool: 'localagent'
 
 variables:
   terraform_version: '1.10.0'
@@ -18,36 +18,50 @@ stages:
               terraform plan
             workingDirectory: terraform-scripts/
             displayName: "Run Terraform Plan"
-  
-  - stage: Approval
-    displayName: "Approval Stage"
-    dependsOn: TerraformPlan
-    condition: succeeded()
-    jobs:
-      - deployment: WaitForApproval
-        displayName: "Manual Approval"
-        pool: server
-        environment: 'Approval'
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                - task: ManualValidation@0
-                  inputs:
-                    instructions: "Approve or reject the deployment."
-                    onTimeout: "reject"
-  
+
+  ## MANUAL APPROVAL
   # - stage: Approval
   #   displayName: "Approval Stage"
   #   dependsOn: TerraformPlan
   #   condition: succeeded()
   #   jobs:
-  #     - job: Approval
-  #       steps:
+  #     - deployment: WaitForApproval
+  #       displayName: "Manual Approval"
+  #       environment: 'Production'
+  #       strategy:
+  #         runOnce:
+  #           deploy:
+  #             steps:
+  #               - task: ManualValidation@0
+  #                 inputs:
+  #                   instructions: "Approve or reject the deployment."
+  #                   onTimeout: "reject"
+
+  ## SIMULATED APPROVAL CALLING THE FUNCTION APP HTTP TRIGGER
+  - stage: Approval
+    displayName: "Approval Stage"
+    dependsOn: TerraformPlan
+    condition: succeeded()
+    jobs:
+      - job: Approval
+        steps:
+          ## RUN ONCE
+          - script: |
+              response=$(curl -s https://<function-app-name>.azurewebsites.net/api/<http-trigger-name>)
+              echo "Approval function response: $response"
+              if [[ "$response" == "Approved" ]]; then
+                  echo "Deployment approved."
+                  exit 0
+              else
+                  echo "Deployment not approved."
+                  exit 1
+              fi
+            displayName: "Call Approval Function"
+          ## EXECUTE 3 RETRIES IN 5 sec INTERVAL
           # - script: |
           #     retries=3
           #     for i in $(seq 1 $retries); do
-          #         response=$(curl -s https://cicdassessment.azurewebsites.net/api/http_trigger1)
+          #         response=$(curl -s https://<function-app-name>.azurewebsites.net/api/<http-trigger-name>)
           #         echo "Attempt $i: Approval function response: $response"
           #         if [[ "$response" == "Approved" ]]; then
           #             echo "Deployment approved."
@@ -59,18 +73,7 @@ stages:
           #     echo "Deployment not approved after $retries attempts."
           #     exit 1
           #   displayName: "Call Approval Function with Retry"
-          ## RUN ONCE
-          # - script: |
-          #     response=$(curl -s https://cicdassessment.azurewebsites.net/api/http_trigger1)
-          #     echo "Approval function response: $response"
-          #     if [[ "$response" == "Approved" ]]; then
-          #         echo "Deployment approved."
-          #         exit 0
-          #     else
-          #         echo "Deployment not approved."
-          #         exit 1
-          #     fi
-          #   displayName: "Call Approval Function"
+
 
   - stage: TerraformApply
     displayName: "Terraform Apply"
