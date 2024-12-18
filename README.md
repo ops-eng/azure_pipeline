@@ -50,7 +50,7 @@ Push the azure-pipeline/ folder to your repository.
 
 ```bash
 git init
-git remote add origin https://\<your-organization\>@dev.azure.com/\<your-organization\>/cicdassessment/_git/cicdassessment
+git remote add origin https://\<your-organization\>@dev.azure.com/\<your-organization\>/\<your-project\>/_git/\<your-project\>
 git push -u origin --all
 git add .
 git commit -m "Initial commit"
